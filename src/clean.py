@@ -4,47 +4,71 @@ import re
 DATA_RAW = "data/raw"
 DATA_CLEAN = "data/cleaned"
 
-def clean_text(text: str) -> str:
+def try_read(path):
+    """To open the text file with fallback encodings."""
+
+    for enc in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
+        try:
+            with open(path, "r", encoding=enc) as f:
+                return f.read(), enc
+        except UnicodeDecodeError:
+            continue
+    raise UnicodeDecodeError(f"Unable to decode {path} with apptoved encodings")
+
+def extract_text(text: str, filename: str = "") -> str:
     """
-    Clean the downloaded Project Gutenberg text by keeping the text between the header and footer, license text, and normalizing whitespace
+    Generalized extraction across all Project Gutenberg regions for text between header and footer.
     """
 
-    original_len = len(text)
+    start_patterns = [
+        r"\*\*\*\s*START OF[^\n]*\n",
+        r"PROJECT GUTENBERG(?:\s+OF)?\s+[A-Z][^\n]*EBOOK",
+        r"Project Gutenberg Australia",
+        r"Project Gutenberg Canada",
+    ]
+    end_patterns = [
+        r"\*\*\*\s*END OF[^\n]*",
+        r"\[End of [^\]]+\]",
+        r"THE END\s*$",
+        r"End of (the )?Project Gutenberg[^\n]*",
+        r"Project Gutenberg Australia",
+        r"Project Gutenberg Canada",
+    ]
 
-    #use regex to extract only the main body text between the Gutenberg markers
-    match = re.search(
-        r"\*\*\* START OF.*?\*\*\*(.*?)\*\*\* END OF.*?\*\*\*",
-        text,
-        flags=re.DOTALL | re.IGNORECASE
-    )
+    start_idx, end_idx = 0, len(text)
 
-    if match:
-        text = match.group(1)
-    else:
-        #fallback pattern, sometimes markers can vary (esp between regions)
-        match = re.search(
-            r"START OF THE PROJECT GUTENBERG EBOOK(.*)",
-            text,
-            flags=re.DOTALL | re.IGNORECASE
-        )
-        if match:
-            text = match.group(1)
-        else:
-            # if none found, leave as is
-            print("No header or footer markers found -- text kept unaltered.")
+    for sp in start_patterns:
+        m = re.search(sp, text, flags=re.IGNORECASE)
+        if m: 
+            start_idx = max(start_idx, m.end())
+    
+    for ep in end_patterns:
+        m = re.search(ep, text[start_idx], flags = re.IGNORECASE)
+        if m:
+            end_idx = start_idx + m.start()
+            break
 
-    text = re.sub(r"End of the Project Gutenberg.*", "", text, flags=re.IGNORECASE)
-    text = re.sub(r"Project Gutenberg.*", "", text, flags=re.IGNORECASE)
+    body = text[start_idx:end_idx].strip()
+    if start_idx == 0 and end_idx == len(text):
+        print(f"No recognizable markers in {filename} - text kept the same.")
+        return text
+    return body
 
-    #normalize line breaks and whitespace
+def normalize_whitespace(text: str) -> str:
     text = re.sub(r"\r\n", "\n", text)
     text = re.sub(r"\n{2,}", "\n", text)
     text = re.sub(r"\s+", " ", text).strip()
+    return text
 
+def clean_text(text: str, filename: str = "") -> str:
+    original_len = len(text)
+    text = extract_text(text, filename)
+    #error handling, caused issues
+    text = re.sub(r"End of (the )?Project Gutenberg.*", "", text, flags=re.IGNORECASE)
+    text = normalize_whitespace(text)
     cleaned_len = len(text)
-    reduction = 100 * (1 - cleaned_len / original_len)
-    print(f"Original: {original_len:,} chars -> Cleaned: {cleaned_len:,} chars ({reduction:.1f}% reduction)")
-
+    reduction = 100 * (1 - cleaned_len / max(original_len, 1))
+    print(f"   Original: {original_len:,} → Cleaned: {cleaned_len:,} ({reduction:.1f}% reduction)")
     return text
 
 def clean_all_books():
