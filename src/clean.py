@@ -19,40 +19,46 @@ def extract_text(text: str, filename: str = "") -> str:
     """
     Generalized extraction across all Project Gutenberg regions for text between header and footer.
     """
-
-    start_patterns = [
-        r"\*\*\*\s*START OF[^\n]*\n",
-        r"PROJECT GUTENBERG(?:\s+OF)?\s+[A-Z][^\n]*EBOOK",
-        r"Project Gutenberg Australia",
-        r"Project Gutenberg Canada",
-    ]
-    end_patterns = [
-        r"\*\*\*\s*END OF[^\n]*",
-        r"\[End of [^\]]+\]",
-        r"THE END\s*$",
-        r"End of (the )?Project Gutenberg[^\n]*",
-        r"Project Gutenberg Australia",
-        r"Project Gutenberg Canada",
-    ]
-
-    start_idx, end_idx = 0, len(text)
-
-    for sp in start_patterns:
-        m = re.search(sp, text, flags=re.IGNORECASE)
-        if m: 
-            start_idx = max(start_idx, m.end())
     
-    for ep in end_patterns:
-        m = re.search(ep, text[start_idx], flags = re.IGNORECASE)
-        if m:
-            end_idx = start_idx + m.start()
-            break
+    #explicit start and end markers (US style)
+    start_pat = re.search(r"\*\*\*\s*START OF.*?\*\*\*", text, flags=re.IGNORECASE)
+    end_pat   = re.search(r"\*\*\*\s*END OF.*?\*\*\*", text, flags=re.IGNORECASE)
+
+    if start_pat and end_pat:
+        return text[start_pat.end():end_pat.start()].strip()
+    
+    #if it doesnt work, try heuristics for AUS/CA
+    start_idx = 0
+    end_idx = len(text)
+
+    #header
+    header_match = re.search(r"(?im)^(?:Title:|CHAPTER\s+I\b|BOOK\s+ONE\b)", text)
+    if header_match:
+        start_idx = max(start_idx, header_match.start())
+
+    #footer
+    footer_match = re.search(
+        r"(?im)(?:\*\*\*\s*END OF|THE END$|\[End of [^\]]+\]|Project Gutenberg(?: Australia| Canada))",
+        text
+    )
+    if footer_match:
+        end_idx = footer_match.start()
 
     body = text[start_idx:end_idx].strip()
-    if start_idx == 0 and end_idx == len(text):
-        print(f"No recognizable markers in {filename} - text kept the same.")
+
+    #safety check to prevent overtrimming
+    if len(body) < 0.5 * len(text) * 0.05:  # <5% of original length
+        print(f" {filename}: extraction too small ({len(body)} chars) — reverting to full text.")
         return text
+
+    #common error license preamble for AU/CA
+    body = re.sub(
+        r"(?si)^\s*\*?\s*A\s+Project\s+Gutenberg\s+(?:of\s+Australia|Canada)\b.*?(?=(?:Title:|CHAPTER|BOOK\s+ONE))",
+        "",
+        body
+    )
     return body
+
 
 def normalize_whitespace(text: str) -> str:
     text = re.sub(r"\r\n", "\n", text)
@@ -97,10 +103,8 @@ def clean_all_books():
             cleaned_file = os.path.join(cleaned_author_path, filename.replace(".txt", "_clean.txt"))
 
             try:
-                with open(raw_file, "r", encoding="utf-8") as f:
-                    text = f.read()
-
-                cleaned_text = clean_text(text)
+                text, enc_used = try_read(raw_file)
+                cleaned_text = clean_text(text, filename)
 
                 with open(cleaned_file, "w", encoding="utf-8") as f:
                     f.write(cleaned_text)
