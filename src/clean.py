@@ -6,19 +6,44 @@ DATA_CLEAN = "data/cleaned"
 
 def clean_text(text: str) -> str:
     """
-    Clean the downloaded Project Gutenberg text by removing headers, footers, license text, and normalizing whitespace
+    Clean the downloaded Project Gutenberg text by keeping the text between the header and footer, license text, and normalizing whitespace
     """
 
-    #remove Gutenberg header and footer
-    text = re.sub(r"\*\*\* START OF.*?\*\*\*", "", text, flags=re.DOTALL | re.IGNORECASE)
-    text = re.sub(r"\*\*\* END OF.?\*\*\*", "", text, flags=re.DOTALL | re.IGNORECASE)
+    original_len = len(text)
+
+    #use regex to extract only the main body text between the Gutenberg markers
+    match = re.search(
+        r"\*\*\* START OF.*?\*\*\*(.*?)\*\*\* END OF.*?\*\*\*",
+        text,
+        flags=re.DOTALL | re.IGNORECASE
+    )
+
+    if match:
+        text = match.group(1)
+    else:
+        #fallback pattern, sometimes markers can vary (esp between regions)
+        match = re.search(
+            r"START OF THE PROJECT GUTENBERG EBOOK(.*)",
+            text,
+            flags=re.DOTALL | re.IGNORECASE
+        )
+        if match:
+            text = match.group(1)
+        else:
+            # if none found, leave as is
+            print("No header or footer markers found -- text kept unaltered.")
+
     text = re.sub(r"End of the Project Gutenberg.*", "", text, flags=re.IGNORECASE)
     text = re.sub(r"Project Gutenberg.*", "", text, flags=re.IGNORECASE)
 
-    #remove non alphabetic characters that slipped through
+    #normalize line breaks and whitespace
     text = re.sub(r"\r\n", "\n", text)
-    text = re.sub(r"\n{2,", "\n", text)
+    text = re.sub(r"\n{2,}", "\n", text)
     text = re.sub(r"\s+", " ", text).strip()
+
+    cleaned_len = len(text)
+    reduction = 100 * (1 - cleaned_len / original_len)
+    print(f"Original: {original_len:,} chars -> Cleaned: {cleaned_len:,} chars ({reduction:.1f}% reduction)")
 
     return text
 
@@ -35,10 +60,11 @@ def clean_all_books():
         if not os.path.isdir(author_path):
             continue #skip the non directory files
 
-        #create a mtching folder in DATA_CLEAN
+        #create a matching folder in DATA_CLEAN
         cleaned_author_path = os.path.join(DATA_CLEAN, author)
         os.makedirs(cleaned_author_path, exist_ok=True)
 
+        print(f"\n Cleaning author: {author}")
         for filename in os.listdir(author_path):
             if not filename.endswith(".txt"):
                 continue
