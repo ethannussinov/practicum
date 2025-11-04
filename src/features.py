@@ -10,7 +10,7 @@ from nltk import word_tokenize, sent_tokenize, pos_tag
 
 nltk.download('punkt')
 nltk.download('stopwords')
-nltk.download('average_perceptron_tagger')
+nltk.download('averaged_perceptron_tagger')
 
 DATA_SEGMENTED = "data/segmented"
 INPUT_FILE = os.path.join(DATA_SEGMENTED, "corpus.csv")
@@ -41,11 +41,11 @@ def lexical_features(text):
 
 def syntactic_features(text):
     sentences = sent_tokenize(text)
-    sent_lens = [len(word_tokenize(s) for s in sentences if len(word_tokenize)) > 0]
+    sent_lens = [len(word_tokenize(s)) for s in sentences if len(word_tokenize(s)) > 0]
     if not sent_lens:
         sent_lens = [0]
 
-    punct_counts = Counter(re.findall(r"[;,:-\-\.!?", text))
+    punct_counts = Counter(re.findall(r"[;,:.\-!?—]", text))
     punct_total = sum(punct_counts.values())
     avg_sent_len = np.mean(sent_lens)
     sent_len_var = np.var(sent_lens)
