@@ -15,7 +15,7 @@ def segment_text(text, words_per_segment=WORDS_PER_SEGMENT):
     segments = []
     for i in range(0, len(words), words_per_segment):
         chunk = " ".join(words[i:i + words_per_segment])
-        if len(chunk.split()) >= words_per_segment * 0.5 # drop small tails
+        if len(chunk.split()) >= words_per_segment * 0.5: #drop small tails
             segments.append(chunk)
     return segments
 
