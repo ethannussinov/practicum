@@ -1,0 +1,6 @@
+author,lex_word_len_avg,lex_ttr,lex_hapax_ratio,lex_stopword_ratio,syn_avg_sent_len,syn_sent_len_var,syn_punct_per_1000,char_semicolons,char_colons,char_emdashes,char_ellipses,char_quotes,char_exclaims,char_question,str_avg_para_len,str_dialogue_ratio
+Aldous Huxley,4.374,0.403,0.28,0.514,19.571,207.963,198.096,1.307,0.269,1.974,0.281,2.241,0.548,1.048,1854.168,0.357
+D.H. Lawrence,4.148,0.356,0.228,0.537,16.491,131.643,197.986,0.343,0.501,0.972,0.047,2.519,1.063,1.356,1873.969,0.321
+E.M. Forster,4.177,0.386,0.26,0.548,19.761,198.651,189.966,0.919,0.353,1.74,0.007,0.0,0.796,1.528,1877.668,0.41
+George Orwell,4.25,0.384,0.259,0.523,18.598,146.767,154.903,0.438,0.217,1.03,0.039,6.918,0.9,0.786,1763.415,0.445
+Virginia Woolf,4.311,0.391,0.267,0.527,24.991,390.812,176.13,1.797,0.13,1.307,0.117,1.333,0.552,1.042,1828.586,0.305
