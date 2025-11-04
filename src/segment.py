@@ -61,7 +61,7 @@ def segment_all_books():
                 })
 
     df = pd.DataFrame(rows)
-    csv_path = os.path.join(DATA_SEGMENTED, "modernist_corpus.csv")
+    csv_path = os.path.join(DATA_SEGMENTED, "corpus.csv")
     df.to_csv(csv_path, index=False)
     print(f"\n Saved {len(df)} total segments to {csv_path}")
 
